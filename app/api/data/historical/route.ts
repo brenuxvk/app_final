@@ -6,14 +6,14 @@ const prisma = new PrismaClient()
 
 export async function GET() {
   try {
-    const historicalData = await prisma.sensor_data.findMany({
-      take: 24, // Pega os últimos 24 registros
+    // Usando os nomes corretos: 'poluicao' e 'id'
+    const historicalData = await prisma.poluicao.findMany({
+      take: 24,
       orderBy: {
-        timestamp: 'desc',
+        id: 'desc',
       },
     })
     
-    // Inverte a ordem para que o gráfico mostre do mais antigo para o mais novo
     return NextResponse.json(historicalData.reverse())
   } catch (error) {
     console.error("Erro ao buscar dados históricos:", error)

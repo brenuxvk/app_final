@@ -16,23 +16,33 @@ export const getAQIStatus = (aqi: number) => {
   return { label: "Ruim", color: "bg-red-500" }
 }
 
-// Função para calcular o AQI (simplificado) com base no valor de CO₂
-export function getAqiInfo(co2Value: number | null | undefined) {
-  if (co2Value === null || co2Value === undefined) {
+// Função para calcular o AQI (simplificado) com base no valor de CO₂ (ou outro poluente)
+export function getAqiInfo(value: string | null | undefined) {
+  // Retorna um valor padrão se o dado não existir
+  if (value === null || value === undefined) {
+    return {
+      index: 0,
+    };
+  }
+
+  // Converte o valor do banco (que é String) para Número
+  const numericValue = parseFloat(value);
+  if (isNaN(numericValue)) {
     return { index: 0 };
   }
 
   let aqi = 0;
   
-  // Fórmula de exemplo para converter ppm de CO₂ para uma escala de AQI
-  if (co2Value <= 400) {
-    aqi = (co2Value / 400) * 50;
-  } else if (co2Value <= 1000) {
-    aqi = 50 + ((co2Value - 400) / 600) * 50;
-  } else if (co2Value <= 2000) {
-    aqi = 100 + ((co2Value - 1000) / 1000) * 50;
-  } else {
-    aqi = 150 + ((co2Value - 2000) / 2000) * 50;
+  // Fórmula de exemplo para converter o valor para uma escala de AQI
+  // Você pode ajustar estes valores conforme a necessidade do seu projeto
+  if (numericValue <= 400) { // Nível ideal
+    aqi = (numericValue / 400) * 50;
+  } else if (numericValue <= 1000) { // Aceitável
+    aqi = 50 + ((numericValue - 400) / 600) * 50;
+  } else if (numericValue <= 2000) { // Ruim para sensíveis
+    aqi = 100 + ((numericValue - 1000) / 1000) * 50;
+  } else { // Ruim para todos
+    aqi = 150 + ((numericValue - 2000) / 2000) * 50;
   }
 
   const finalAqi = Math.min(Math.round(aqi), 200);

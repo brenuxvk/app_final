@@ -65,8 +65,8 @@ export default function PollutionDashboard({ onLogout }: { onLogout: () => void 
       
       const aqiHistorical = historical.map((d: any) => ({
         ...d,
-        aqi: getAqiInfo(d.co2).index,
-        time: new Date(d.timestamp).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })
+        aqi: getAqiInfo(d.value).index,
+        time: new Date(d.dia).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })
       }));
       
       setSensorData(aqiHistorical);
@@ -111,38 +111,35 @@ export default function PollutionDashboard({ onLogout }: { onLogout: () => void 
             <MetricCardSkeleton />
             <MetricCardSkeleton />
           </div>
+          <div className="h-48 bg-gray-200 dark:bg-slate-700 rounded-lg w-full mb-8"></div>
+          <div className="h-96 bg-gray-200 dark:bg-slate-700 rounded-lg w-full"></div>
         </div>
       </div>
     );
   }
 
-  const aqiInfo = getAqiInfo(currentData?.co2);
+  const aqiInfo = getAqiInfo(currentData?.value);
   const aqiStatus = getAQIStatus(aqiInfo.index);
   const onlineSensors = sensors.filter((s) => s.status === "online").length;
 
   const predictionData: PredictionData[] = sensorData.map((point) => ({
-    timestamp: new Date(point.timestamp).getTime(),
+    timestamp: new Date(point.dia).getTime(),
     aqi: point.aqi,
     pm25: 0,
     pm10: 0,
-    co2: point.co2,
+    co2: parseFloat(point.value) || 0,
   }));
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-green-100 dark:from-slate-900 dark:to-slate-800 transition-colors duration-300">
-       {fullscreenChart && (
+      {fullscreenChart && (
         <div className="fixed inset-0 z-[10000] bg-black/80 flex items-center justify-center p-4">
           <Card className="w-full max-w-6xl h-[80vh] bg-slate-50 dark:bg-slate-800">
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="text-emerald-600 dark:text-emerald-400">
                 {fullscreenChart === "aqi" ? "Qualidade do Ar - Últimas 24h" : "Níveis de CO₂"}
               </CardTitle>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setFullscreenChart(null)}
-                className="border-emerald-300 dark:border-emerald-600"
-              >
+              <Button variant="outline" size="sm" onClick={() => setFullscreenChart(null)} className="border-emerald-300 dark:border-emerald-600">
                 <Minimize2 className="w-4 h-4" />
               </Button>
             </CardHeader>
@@ -162,7 +159,7 @@ export default function PollutionDashboard({ onLogout }: { onLogout: () => void 
                     <XAxis dataKey="time" stroke={theme === "dark" ? "#9CA3AF" : "#6b7280"} />
                     <YAxis stroke={theme === "dark" ? "#9CA3AF" : "#6b7280"} />
                     <Tooltip contentStyle={{ backgroundColor: theme === "dark" ? "#1f2937" : "#ffffff", border: "1px solid #10B981" }} />
-                    <Bar dataKey="co2" fill="#10b981" />
+                    <Bar dataKey="value" fill="#10b981" />
                   </BarChart>
                 )}
               </ResponsiveContainer>
@@ -232,12 +229,12 @@ export default function PollutionDashboard({ onLogout }: { onLogout: () => void 
           </Card>
           <Card className="bg-slate-50/80 dark:bg-slate-800/80 backdrop-blur-sm border-emerald-200 dark:border-emerald-700">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-emerald-600 dark:text-emerald-400">CO₂</CardTitle>
+              <CardTitle className="text-sm font-medium text-emerald-600 dark:text-emerald-400">Poluente Principal (Valor)</CardTitle>
               <Zap className="h-4 w-4 text-emerald-500" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-slate-900 dark:text-slate-100">
-                {currentData?.co2 ?? 'N/A'} <span className="text-sm font-normal text-slate-400 dark:text-slate-500">ppm</span>
+                {currentData?.value ?? 'N/A'} <span className="text-sm font-normal text-slate-400 dark:text-slate-500">ppm</span>
               </div>
               <div className="flex items-center text-sm text-yellow-600 dark:text-yellow-400 mt-1">
                 <TrendingUp className="w-3 h-3 mr-1" />
@@ -281,7 +278,6 @@ export default function PollutionDashboard({ onLogout }: { onLogout: () => void 
               </Button>
             </div>
           </div>
-
           <TabsContent value="trends" className="space-y-6">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <Card className="bg-slate-50/80 dark:bg-slate-800/80 backdrop-blur-sm border-emerald-200 dark:border-emerald-700">
@@ -310,10 +306,10 @@ export default function PollutionDashboard({ onLogout }: { onLogout: () => void 
               <Card className="bg-slate-50/80 dark:bg-slate-800/80 backdrop-blur-sm border-emerald-200 dark:border-emerald-700">
                 <CardHeader className="flex flex-row items-center justify-between">
                   <div>
-                    <CardTitle className="text-emerald-600 dark:text-emerald-400">Níveis de CO₂</CardTitle>
-                    <CardDescription className="text-slate-600 dark:text-slate-300">Concentração de dióxido de carbono (ppm)</CardDescription>
+                    <CardTitle className="text-emerald-600 dark:text-emerald-400">Níveis de Poluente</CardTitle>
+                    <CardDescription className="text-slate-600 dark:text-slate-300">Concentração do poluente principal (ppm)</CardDescription>
                   </div>
-                  <Button variant="ghost" size="sm" onClick={() => setFullscreenChart("co2")} className="text-emerald-600 dark:text-emerald-400">
+                  <Button variant="ghost" size="sm" onClick={() => setFullscreenChart("value")} className="text-emerald-600 dark:text-emerald-400">
                     <Maximize2 className="w-4 h-4" />
                   </Button>
                 </CardHeader>
@@ -324,7 +320,7 @@ export default function PollutionDashboard({ onLogout }: { onLogout: () => void 
                       <XAxis dataKey="time" stroke={theme === "dark" ? "#9CA3AF" : "#6b7280"} />
                       <YAxis stroke={theme === "dark" ? "#9CA3AF" : "#6b7280"} />
                       <Tooltip contentStyle={{ backgroundColor: theme === "dark" ? "#1f2937" : "#ffffff", border: "1px solid #10B981" }} />
-                      <Bar dataKey="co2" fill="#10b981" />
+                      <Bar dataKey="value" fill="#10b981" />
                     </BarChart>
                   </ResponsiveContainer>
                 </CardContent>
@@ -346,7 +342,7 @@ export default function PollutionDashboard({ onLogout }: { onLogout: () => void 
                       <TableHead className="text-slate-700 dark:text-slate-300">Localização</TableHead>
                       <TableHead className="text-slate-700 dark:text-slate-300">Status</TableHead>
                       <TableHead className="text-slate-700 dark:text-slate-300">AQI</TableHead>
-                      <TableHead className="text-slate-700 dark:text-slate-300">CO₂</TableHead>
+                      <TableHead className="text-slate-700 dark:text-slate-300">Valor (ppm)</TableHead>
                       <TableHead className="text-slate-700 dark:text-slate-300">Última Atualização</TableHead>
                     </TableRow>
                   </TableHeader>

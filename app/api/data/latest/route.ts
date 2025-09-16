@@ -6,9 +6,10 @@ const prisma = new PrismaClient()
 
 export async function GET() {
   try {
-    const latestData = await prisma.sensor_data.findFirst({
+    // Usando os nomes corretos: 'poluicao' e 'id'
+    const latestData = await prisma.poluicao.findFirst({
       orderBy: {
-        timestamp: 'desc',
+        id: 'desc',
       },
     })
 
