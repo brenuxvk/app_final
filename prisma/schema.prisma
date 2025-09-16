@@ -1,0 +1,17 @@
+generator client {
+  provider = "mysql"
+  output   = "../lib/generated/prisma"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model poluicao {
+  id       BigInt  @id @unique(map: "id") @default(autoincrement()) @db.UnsignedBigInt
+  value    String? @db.Text
+  dia      String? @db.Text
+  sensor   String? @db.Text
+  location String? @db.Text
+}
