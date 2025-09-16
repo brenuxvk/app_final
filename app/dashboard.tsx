@@ -31,147 +31,106 @@ import { NotificationCenter } from "../components/notifications"
 import { UserMenu } from "../components/user-menu"
 import { useTheme } from "../contexts/theme-context"
 import type { PredictionData } from "../components/prediction-ai"
+import { MetricCardSkeleton } from "../components/loading-skeleton"
+import { getAqiInfo, getAQIStatus } from "../lib/utils"
 
-// Função para gerar dados dinâmicos
-const generateRandomData = () => {
-  const baseAQI = 65 + Math.random() * 30
-  const baseCO2 = 420 + Math.random() * 50
-
-  return {
-    aqi: Math.round(baseAQI),
-    co2: Math.round(baseCO2),
-  }
-}
-
-// Função para gerar dados históricos das últimas 24h
-const generateHistoricalData = () => {
-  const data = []
-  const now = new Date()
-
-  for (let i = 23; i >= 0; i--) {
-    const time = new Date(now.getTime() - i * 60 * 60 * 1000)
-    const timeStr = time.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })
-    const randomData = generateRandomData()
-
-    data.push({
-      time: timeStr,
-      co2: randomData.co2,
-      aqi: randomData.aqi,
-    })
-  }
-
-  return data
-}
-
-// Função para gerar status dos sensores dinamicamente
-const generateSensorStatus = () => {
-  const locations = ["Pedreira Norte", "Usina Siderúrgica", "Fábrica de Cimento", "Mineradora Sul", "Indústria Química"]
-
-  return locations.map((location, index) => {
-    const data = generateRandomData()
-    const isOnline = Math.random() > 0.1
-    const lastUpdateMinutes = Math.floor(Math.random() * 10) + 1
-
-    return {
-      id: `S00${index + 1}`,
-      location,
-      status: isOnline ? "online" : "offline",
-      aqi: isOnline ? data.aqi : 0,
-      co2: isOnline ? data.co2 : 0,
-      lastUpdate: isOnline ? `${lastUpdateMinutes} min` : "2h",
-    }
-  })
-}
-
-const getAQIStatus = (aqi: number) => {
-  if (aqi <= 50)
-    return { label: "Excelente", color: "bg-green-600", textColor: "text-green-700", bgColor: "bg-green-50" }
-  if (aqi <= 100) return { label: "Bom", color: "bg-green-500", textColor: "text-green-600", bgColor: "bg-green-50" }
-  if (aqi <= 150)
-    return { label: "Moderado", color: "bg-yellow-500", textColor: "text-yellow-600", bgColor: "bg-yellow-50" }
-  return { label: "Ruim", color: "bg-red-500", textColor: "text-red-700", bgColor: "bg-red-50" }
-}
-
-export default function PollutionDashboard() {
+export default function PollutionDashboard({ onLogout }: { onLogout: () => void }) {
   const [currentTime, setCurrentTime] = useState(new Date())
-  const [currentData, setCurrentData] = useState(generateRandomData())
-  const [sensorData, setSensorData] = useState(generateHistoricalData())
-  const [sensors, setSensors] = useState(generateSensorStatus())
+  const [currentData, setCurrentData] = useState<any>(null)
+  const [sensorData, setSensorData] = useState<any[]>([])
+  const [sensors, setSensors] = useState<any[]>([])
   const [isRealTimeActive, setIsRealTimeActive] = useState(false)
-  const [lastUpdate, setLastUpdate] = useState(new Date())
+  const [lastUpdate, setLastUpdate] = useState<Date | null>(null)
   const [fullscreenChart, setFullscreenChart] = useState<string | null>(null)
   const { theme, toggleTheme } = useTheme()
+  const [isLoading, setIsLoading] = useState(true)
 
-  // Converter dados para formato de IA
-  const predictionData: PredictionData[] = sensorData.map((point, index) => ({
-    timestamp: Date.now() - (sensorData.length - index - 1) * 60 * 60 * 1000,
+  const fetchData = useCallback(async () => {
+    try {
+      const [currentRes, historicalRes, sensorsRes] = await Promise.all([
+        fetch('/api/data/latest'),
+        fetch('/api/data/historical'),
+        fetch('/api/data/sensors')
+      ]);
+
+      if (!currentRes.ok || !historicalRes.ok || !sensorsRes.ok) {
+        throw new Error('Falha ao buscar dados da API');
+      }
+
+      const current = await currentRes.json();
+      const historical = await historicalRes.json();
+      const sensorsData = await sensorsRes.json();
+
+      setCurrentData(current);
+      
+      const aqiHistorical = historical.map((d: any) => ({
+        ...d,
+        aqi: getAqiInfo(d.co2).index,
+        time: new Date(d.timestamp).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })
+      }));
+      
+      setSensorData(aqiHistorical);
+      setSensors(sensorsData);
+      setLastUpdate(new Date());
+
+    } catch (error) {
+      console.error("Erro ao carregar dados:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    setIsLoading(true);
+    fetchData();
+  }, [fetchData]);
+
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+  
+  useEffect(() => {
+    if (!isRealTimeActive) return;
+    const interval = setInterval(fetchData, 5000);
+    return () => clearInterval(interval);
+  }, [isRealTimeActive, fetchData]);
+  
+  const toggleRealTime = useCallback(() => setIsRealTimeActive(prev => !prev), []);
+
+  const handleManualUpdate = useCallback(() => {
+    setIsLoading(true);
+    fetchData();
+  }, [fetchData]);
+
+  if (isLoading || !currentData) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-green-100 dark:from-slate-900 dark:to-slate-800 p-8">
+        <div className="max-w-7xl mx-auto animate-pulse">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <MetricCardSkeleton />
+            <MetricCardSkeleton />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const aqiInfo = getAqiInfo(currentData?.co2);
+  const aqiStatus = getAQIStatus(aqiInfo.index);
+  const onlineSensors = sensors.filter((s) => s.status === "online").length;
+
+  const predictionData: PredictionData[] = sensorData.map((point) => ({
+    timestamp: new Date(point.timestamp).getTime(),
     aqi: point.aqi,
     pm25: 0,
     pm10: 0,
     co2: point.co2,
-  }))
-
-  // Atualizar relógio a cada segundo
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentTime(new Date())
-    }, 1000)
-    return () => clearInterval(timer)
-  }, [])
-
-  // Atualizar dados em tempo real
-  useEffect(() => {
-    if (!isRealTimeActive) return
-
-    const interval = setInterval(() => {
-      setCurrentData(generateRandomData())
-      setSensors(generateSensorStatus())
-
-      setSensorData((prevData) => {
-        const newData = [...prevData]
-        const now = new Date()
-        const timeStr = now.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })
-        const randomData = generateRandomData()
-
-        newData.shift()
-        newData.push({
-          time: timeStr,
-          co2: randomData.co2,
-          aqi: randomData.aqi,
-        })
-
-        return newData
-      })
-
-      setLastUpdate(new Date())
-    }, 5000)
-
-    return () => clearInterval(interval)
-  }, [isRealTimeActive])
-
-  const toggleRealTime = useCallback(() => {
-    setIsRealTimeActive((prev) => !prev)
-  }, [])
-
-  const handleManualUpdate = useCallback(() => {
-    setCurrentData(generateRandomData())
-    setSensors(generateSensorStatus())
-    setSensorData(generateHistoricalData())
-    setLastUpdate(new Date())
-  }, [])
-
-  const handleLogout = () => {
-    window.location.reload()
-  }
-
-  const currentAQI = currentData.aqi
-  const aqiStatus = getAQIStatus(currentAQI)
-  const onlineSensors = sensors.filter((s) => s.status === "online").length
+  }));
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-green-100 dark:from-slate-900 dark:to-slate-800 transition-colors duration-300">
-      {/* Fullscreen Chart Modal */}
-      {fullscreenChart && (
+       {fullscreenChart && (
         <div className="fixed inset-0 z-[10000] bg-black/80 flex items-center justify-center p-4">
           <Card className="w-full max-w-6xl h-[80vh] bg-slate-50 dark:bg-slate-800">
             <CardHeader className="flex flex-row items-center justify-between">
@@ -194,14 +153,7 @@ export default function PollutionDashboard() {
                     <CartesianGrid strokeDasharray="3 3" stroke={theme === "dark" ? "#374151" : "#d1d5db"} />
                     <XAxis dataKey="time" stroke={theme === "dark" ? "#9CA3AF" : "#6b7280"} />
                     <YAxis stroke={theme === "dark" ? "#9CA3AF" : "#6b7280"} />
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: theme === "dark" ? "#1f2937" : "#ffffff",
-                        border: "1px solid #10B981",
-                        borderRadius: "8px",
-                        color: theme === "dark" ? "#ffffff" : "#000000",
-                      }}
-                    />
+                    <Tooltip contentStyle={{ backgroundColor: theme === "dark" ? "#1f2937" : "#ffffff", border: "1px solid #10B981" }} />
                     <Area type="monotone" dataKey="aqi" stroke="#10B981" fill="#10B981" fillOpacity={0.3} />
                   </AreaChart>
                 ) : (
@@ -209,14 +161,7 @@ export default function PollutionDashboard() {
                     <CartesianGrid strokeDasharray="3 3" stroke={theme === "dark" ? "#374151" : "#d1d5db"} />
                     <XAxis dataKey="time" stroke={theme === "dark" ? "#9CA3AF" : "#6b7280"} />
                     <YAxis stroke={theme === "dark" ? "#9CA3AF" : "#6b7280"} />
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: theme === "dark" ? "#1f2937" : "#ffffff",
-                        border: "1px solid #10B981",
-                        borderRadius: "8px",
-                        color: theme === "dark" ? "#ffffff" : "#000000",
-                      }}
-                    />
+                    <Tooltip contentStyle={{ backgroundColor: theme === "dark" ? "#1f2937" : "#ffffff", border: "1px solid #10B981" }} />
                     <Bar dataKey="co2" fill="#10b981" />
                   </BarChart>
                 )}
@@ -226,7 +171,6 @@ export default function PollutionDashboard() {
         </div>
       )}
 
-      {/* Header */}
       <header className="bg-slate-50/80 dark:bg-slate-800/80 backdrop-blur-sm border-b border-emerald-200 dark:border-emerald-700 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
@@ -238,7 +182,7 @@ export default function PollutionDashboard() {
                 <span className="text-sm font-mono">{currentTime.toLocaleTimeString("pt-BR")}</span>
                 <div className="ml-4 text-xs">
                   <span className="text-slate-600 dark:text-slate-300">Última atualização: </span>
-                  <span>{lastUpdate.toLocaleTimeString("pt-BR")}</span>
+                  <span>{lastUpdate?.toLocaleTimeString("pt-BR") ?? '...'}</span>
                 </div>
                 {isRealTimeActive && (
                   <div className="ml-2 flex items-center">
@@ -249,77 +193,51 @@ export default function PollutionDashboard() {
               </div>
             </div>
             <div className="flex items-center space-x-4">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={toggleTheme}
-                className="border-emerald-300 dark:border-emerald-600 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 bg-transparent"
-              >
+              <Button variant="outline" size="sm" onClick={toggleTheme} className="border-emerald-300 dark:border-emerald-600 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 bg-transparent">
                 {theme === "light" ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
               </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className="border-emerald-300 dark:border-emerald-600 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 bg-transparent"
-                onClick={handleManualUpdate}
-              >
+              <Button variant="outline" size="sm" className="border-emerald-300 dark:border-emerald-600 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 bg-transparent" onClick={handleManualUpdate}>
                 <RefreshCw className="w-4 h-4 mr-2" />
                 Atualizar
               </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className={`border-emerald-300 dark:border-emerald-600 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 bg-transparent ${
-                  isRealTimeActive ? "bg-emerald-50 dark:bg-emerald-900/20" : ""
-                }`}
-                onClick={toggleRealTime}
-              >
+              <Button variant="outline" size="sm" className={`border-emerald-300 dark:border-emerald-600 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 bg-transparent ${isRealTimeActive ? "bg-emerald-50 dark:bg-emerald-900/20" : ""}`} onClick={toggleRealTime}>
                 <RefreshCw className={`w-4 h-4 mr-2 ${isRealTimeActive ? "animate-spin" : ""}`} />
                 {isRealTimeActive ? "Parar Tempo Real" : "Tempo Real"}
               </Button>
-              <Badge
-                variant="outline"
-                className="text-emerald-600 dark:text-emerald-400 border-emerald-300 dark:border-emerald-600 bg-slate-50 dark:bg-slate-800"
-              >
+              <Badge variant="outline" className="text-emerald-600 dark:text-emerald-400 border-emerald-300 dark:border-emerald-600 bg-slate-50 dark:bg-slate-800">
                 <CheckCircle className="w-3 h-3 mr-1" />
                 {onlineSensors}/{sensors.length} Sensores Online
               </Badge>
               <NotificationCenter />
-              <UserMenu onLogout={handleLogout} />
+              <UserMenu onLogout={onLogout} />
             </div>
           </div>
         </div>
       </header>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Métricas Principais */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-          <Card className="bg-slate-50/80 dark:bg-slate-800/80 backdrop-blur-sm border-emerald-200 dark:border-emerald-700 hover:border-emerald-300 dark:hover:border-emerald-600 transition-all duration-300 hover:shadow-lg hover:shadow-emerald-400/10">
+          <Card className="bg-slate-50/80 dark:bg-slate-800/80 backdrop-blur-sm border-emerald-200 dark:border-emerald-700">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-emerald-600 dark:text-emerald-400">
-                Índice de Qualidade do Ar
-              </CardTitle>
-              <Activity className="h-4 w-4 text-emerald-500 dark:text-emerald-400" />
+              <CardTitle className="text-sm font-medium text-emerald-600 dark:text-emerald-400">Índice de Qualidade do Ar</CardTitle>
+              <Activity className="h-4 w-4 text-emerald-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-slate-900 dark:text-slate-100">{currentAQI}</div>
+              <div className="text-2xl font-bold text-slate-900 dark:text-slate-100">{aqiInfo.index}</div>
               <div className="flex items-center mt-2">
-                <Badge className={`${aqiStatus.color} text-white hover:scale-105 transition-transform`}>
-                  {aqiStatus.label}
-                </Badge>
+                <Badge className={`${aqiStatus.color} text-white`}>{aqiStatus.label}</Badge>
               </div>
-              <Progress value={currentAQI} max={150} className="mt-3 bg-slate-200 dark:bg-slate-600" />
+              <Progress value={aqiInfo.index} max={200} className="mt-3" />
             </CardContent>
           </Card>
-
-          <Card className="bg-slate-50/80 dark:bg-slate-800/80 backdrop-blur-sm border-emerald-200 dark:border-emerald-700 hover:border-emerald-300 dark:hover:border-emerald-600 transition-all duration-300 hover:shadow-lg hover:shadow-emerald-400/10">
+          <Card className="bg-slate-50/80 dark:bg-slate-800/80 backdrop-blur-sm border-emerald-200 dark:border-emerald-700">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium text-emerald-600 dark:text-emerald-400">CO₂</CardTitle>
-              <Zap className="h-4 w-4 text-emerald-500 dark:text-emerald-400" />
+              <Zap className="h-4 w-4 text-emerald-500" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-slate-900 dark:text-slate-100">
-                {currentData.co2} <span className="text-sm font-normal text-slate-400 dark:text-slate-500">ppm</span>
+                {currentData?.co2 ?? 'N/A'} <span className="text-sm font-normal text-slate-400 dark:text-slate-500">ppm</span>
               </div>
               <div className="flex items-center text-sm text-yellow-600 dark:text-yellow-400 mt-1">
                 <TrendingUp className="w-3 h-3 mr-1" />
@@ -328,8 +246,6 @@ export default function PollutionDashboard() {
             </CardContent>
           </Card>
         </div>
-
-        {/* Alertas */}
         <Card className="mb-8 border-emerald-200 dark:border-emerald-700 bg-slate-50/80 dark:bg-slate-800/80 backdrop-blur-sm">
           <CardHeader>
             <div className="flex items-center justify-between">
@@ -337,11 +253,7 @@ export default function PollutionDashboard() {
                 <AlertTriangle className="h-5 w-5 text-emerald-600 dark:text-emerald-400 mr-2" />
                 <CardTitle className="text-emerald-600 dark:text-emerald-400">Alertas do Sistema</CardTitle>
               </div>
-              <Button
-                variant="outline"
-                size="sm"
-                className="border-emerald-300 dark:border-emerald-600 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 bg-transparent"
-              >
+              <Button variant="outline" size="sm" className="border-emerald-300 dark:border-emerald-600 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 bg-transparent">
                 <Filter className="w-4 h-4 mr-2" />
                 Filtrar
               </Button>
@@ -349,72 +261,21 @@ export default function PollutionDashboard() {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              <div className="flex items-center justify-between p-4 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg border border-emerald-200 dark:border-emerald-700 hover:border-emerald-300 dark:hover:border-emerald-600 transition-all duration-300 cursor-pointer">
-                <div>
-                  <p className="font-medium text-slate-900 dark:text-slate-100">Usina Siderúrgica - Sensor S002</p>
-                  <p className="text-sm text-slate-600 dark:text-slate-300">AQI acima do limite recomendado (95)</p>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Badge variant="destructive" className="hover:scale-105 transition-transform">
-                    Alto
-                  </Badge>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300"
-                  >
-                    <Eye className="w-4 h-4" />
-                  </Button>
-                </div>
-              </div>
-              <div className="flex items-center justify-between p-4 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg border border-emerald-200 dark:border-emerald-700 hover:border-emerald-300 dark:hover:border-emerald-600 transition-all duration-300 cursor-pointer">
-                <div>
-                  <p className="font-medium text-slate-900 dark:text-slate-100">Sensor S004 - Offline</p>
-                  <p className="text-sm text-slate-600 dark:text-slate-300">Sem comunicação há 2 horas</p>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Badge variant="secondary" className="hover:scale-105 transition-transform">
-                    Manutenção
-                  </Badge>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300"
-                  >
-                    <Eye className="w-4 h-4" />
-                  </Button>
-                </div>
+              <div className="flex items-center justify-between p-4 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg border border-emerald-200 dark:border-emerald-700">
+                  <p className="font-medium text-slate-900 dark:text-slate-100">Nenhum alerta crítico no momento.</p>
               </div>
             </div>
           </CardContent>
         </Card>
-
-        {/* Painel de IA Preditiva */}
         <PredictionPanel historicalData={predictionData} isRealTimeActive={isRealTimeActive} />
-
-        {/* Gráficos e Tabelas */}
         <Tabs defaultValue="trends" className="space-y-6">
           <div className="flex items-center justify-between">
             <TabsList className="grid w-full max-w-md grid-cols-2 bg-slate-50/80 dark:bg-slate-800/80 backdrop-blur-sm border border-emerald-200 dark:border-emerald-700">
-              <TabsTrigger
-                value="trends"
-                className="data-[state=active]:bg-emerald-600 data-[state=active]:text-white text-emerald-600 dark:text-emerald-400"
-              >
-                Tendências
-              </TabsTrigger>
-              <TabsTrigger
-                value="sensors"
-                className="data-[state=active]:bg-emerald-600 data-[state=active]:text-white text-emerald-600 dark:text-emerald-400"
-              >
-                Sensores
-              </TabsTrigger>
+              <TabsTrigger value="trends" className="data-[state=active]:bg-emerald-600 data-[state=active]:text-white text-emerald-600 dark:text-emerald-400">Tendências</TabsTrigger>
+              <TabsTrigger value="sensors" className="data-[state=active]:bg-emerald-600 data-[state=active]:text-white text-emerald-600 dark:text-emerald-400">Sensores</TabsTrigger>
             </TabsList>
             <div className="flex space-x-2">
-              <Button
-                variant="outline"
-                size="sm"
-                className="border-emerald-300 dark:border-emerald-600 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 bg-transparent"
-              >
+              <Button variant="outline" size="sm" className="border-emerald-300 dark:border-emerald-600 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 bg-transparent">
                 <Download className="w-4 h-4 mr-2" />
                 Exportar
               </Button>
@@ -426,19 +287,10 @@ export default function PollutionDashboard() {
               <Card className="bg-slate-50/80 dark:bg-slate-800/80 backdrop-blur-sm border-emerald-200 dark:border-emerald-700">
                 <CardHeader className="flex flex-row items-center justify-between">
                   <div>
-                    <CardTitle className="text-emerald-600 dark:text-emerald-400">
-                      Qualidade do Ar - Últimas 24h
-                    </CardTitle>
-                    <CardDescription className="text-slate-600 dark:text-slate-300">
-                      Índice de Qualidade do Ar ao longo do tempo
-                    </CardDescription>
+                    <CardTitle className="text-emerald-600 dark:text-emerald-400">Qualidade do Ar - Últimas 24h</CardTitle>
+                    <CardDescription className="text-slate-600 dark:text-slate-300">Índice de Qualidade do Ar ao longo do tempo</CardDescription>
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setFullscreenChart("aqi")}
-                    className="text-emerald-600 dark:text-emerald-400"
-                  >
+                  <Button variant="ghost" size="sm" onClick={() => setFullscreenChart("aqi")} className="text-emerald-600 dark:text-emerald-400">
                     <Maximize2 className="w-4 h-4" />
                   </Button>
                 </CardHeader>
@@ -448,14 +300,7 @@ export default function PollutionDashboard() {
                       <CartesianGrid strokeDasharray="3 3" stroke={theme === "dark" ? "#374151" : "#d1d5db"} />
                       <XAxis dataKey="time" stroke={theme === "dark" ? "#9CA3AF" : "#6b7280"} />
                       <YAxis stroke={theme === "dark" ? "#9CA3AF" : "#6b7280"} />
-                      <Tooltip
-                        contentStyle={{
-                          backgroundColor: theme === "dark" ? "#1f2937" : "#ffffff",
-                          border: "1px solid #10B981",
-                          borderRadius: "8px",
-                          color: theme === "dark" ? "#ffffff" : "#000000",
-                        }}
-                      />
+                      <Tooltip contentStyle={{ backgroundColor: theme === "dark" ? "#1f2937" : "#ffffff", border: "1px solid #10B981"}} />
                       <Area type="monotone" dataKey="aqi" stroke="#10B981" fill="#10B981" fillOpacity={0.3} />
                     </AreaChart>
                   </ResponsiveContainer>
@@ -466,16 +311,9 @@ export default function PollutionDashboard() {
                 <CardHeader className="flex flex-row items-center justify-between">
                   <div>
                     <CardTitle className="text-emerald-600 dark:text-emerald-400">Níveis de CO₂</CardTitle>
-                    <CardDescription className="text-slate-600 dark:text-slate-300">
-                      Concentração de dióxido de carbono (ppm)
-                    </CardDescription>
+                    <CardDescription className="text-slate-600 dark:text-slate-300">Concentração de dióxido de carbono (ppm)</CardDescription>
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setFullscreenChart("co2")}
-                    className="text-emerald-600 dark:text-emerald-400"
-                  >
+                  <Button variant="ghost" size="sm" onClick={() => setFullscreenChart("co2")} className="text-emerald-600 dark:text-emerald-400">
                     <Maximize2 className="w-4 h-4" />
                   </Button>
                 </CardHeader>
@@ -485,14 +323,7 @@ export default function PollutionDashboard() {
                       <CartesianGrid strokeDasharray="3 3" stroke={theme === "dark" ? "#374151" : "#d1d5db"} />
                       <XAxis dataKey="time" stroke={theme === "dark" ? "#9CA3AF" : "#6b7280"} />
                       <YAxis stroke={theme === "dark" ? "#9CA3AF" : "#6b7280"} />
-                      <Tooltip
-                        contentStyle={{
-                          backgroundColor: theme === "dark" ? "#1f2937" : "#ffffff",
-                          border: "1px solid #10B981",
-                          borderRadius: "8px",
-                          color: theme === "dark" ? "#ffffff" : "#000000",
-                        }}
-                      />
+                      <Tooltip contentStyle={{ backgroundColor: theme === "dark" ? "#1f2937" : "#ffffff", border: "1px solid #10B981" }} />
                       <Bar dataKey="co2" fill="#10b981" />
                     </BarChart>
                   </ResponsiveContainer>
@@ -505,9 +336,7 @@ export default function PollutionDashboard() {
             <Card className="bg-slate-50/80 dark:bg-slate-800/80 backdrop-blur-sm border-emerald-200 dark:border-emerald-700">
               <CardHeader>
                 <CardTitle className="text-emerald-600 dark:text-emerald-400">Status dos Sensores</CardTitle>
-                <CardDescription className="text-slate-600 dark:text-slate-300">
-                  Monitoramento em tempo real de todos os sensores
-                </CardDescription>
+                <CardDescription className="text-slate-600 dark:text-slate-300">Monitoramento em tempo real de todos os sensores</CardDescription>
               </CardHeader>
               <CardContent>
                 <Table>
