@@ -1,22 +1,15 @@
-// app/api/data/historical/route.ts
-import { PrismaClient } from '@prisma/client'
-import { NextResponse } from 'next/server'
+import { query } from '@/lib/db';
+import { NextResponse } from 'next/server';
 
-const prisma = new PrismaClient()
+export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
-    // Usando os nomes corretos: 'poluicao' e 'id'
-    const historicalData = await prisma.poluicao.findMany({
-      take: 24,
-      orderBy: {
-        id: 'desc',
-      },
-    })
+    const sqlQuery = "SELECT * FROM `poluicao` ORDER BY `id` DESC LIMIT 24";
+    const historicalData: any = await query({ query: sqlQuery });
     
-    return NextResponse.json(historicalData.reverse())
+    return NextResponse.json(historicalData.reverse());
   } catch (error) {
-    console.error("Erro ao buscar dados históricos:", error)
-    return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 })
+    return NextResponse.json({ error: 'Erro interno do servidor ao buscar o histórico.' }, { status: 500 });
   }
 }

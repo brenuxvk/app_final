@@ -1,25 +1,20 @@
-// app/api/data/latest/route.ts
-import { PrismaClient } from '@prisma/client'
-import { NextResponse } from 'next/server'
+import { query } from '@/lib/db';
+import { NextResponse } from 'next/server';
 
-const prisma = new PrismaClient()
+export const dynamic = 'force-dynamic'; // Garante que a rota não seja cacheada
 
 export async function GET() {
   try {
-    // Usando os nomes corretos: 'poluicao' e 'id'
-    const latestData = await prisma.poluicao.findFirst({
-      orderBy: {
-        id: 'desc',
-      },
-    })
+    const sqlQuery = "SELECT * FROM `poluicao` ORDER BY `id` DESC LIMIT 1";
+    const latestData: any = await query({ query: sqlQuery });
 
-    if (!latestData) {
-      return NextResponse.json({ error: 'Nenhum dado encontrado' }, { status: 404 })
+    if (!latestData || latestData.length === 0) {
+      return NextResponse.json({ error: 'Nenhum dado encontrado' }, { status: 404 });
     }
 
-    return NextResponse.json(latestData)
+    return NextResponse.json(latestData[0]);
   } catch (error) {
-    console.error("Erro ao buscar dado mais recente:", error)
-    return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 })
+    // O erro detalhado será impresso no terminal do VS Code
+    return NextResponse.json({ error: 'Erro interno do servidor ao buscar o último dado.' }, { status: 500 });
   }
 }
