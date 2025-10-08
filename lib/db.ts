@@ -1,19 +1,30 @@
-import mysql from "mysql2/promise";
+// ficheiro: lib/db.ts
+import mysql from 'mysql2/promise';
 
-let connection: any;
+export async function query({ query, values = [] }: { query: string, values?: any[] }) {
+  const connectionString = process.env.DATABASE_URL;
 
-export async function query({ query, values = [] }: { query: string; values?: any[] }) {
+  // A CORREÇÃO ESTÁ AQUI:
+  // Verificamos se a connectionString foi encontrada. Se não, lançamos um erro.
+  if (!connectionString) {
+    throw new Error("A variável de ambiente DATABASE_URL não está definida ou não foi encontrada.");
+  }
+
+  let connection;
   try {
-    if (!connection) {
-      console.log("🔌 Tentando conectar ao MySQL com URL:", process.env.DATABASE_URL);
-      connection = await mysql.createConnection(process.env.DATABASE_URL as string);
-      console.log("✅ Conectado ao banco MySQL");
-    }
-
+    // A partir daqui, o TypeScript sabe que connectionString é definitivamente uma string.
+    connection = await mysql.createConnection(connectionString);
+    
     const [results] = await connection.execute(query, values);
+    
+    await connection.end();
+    
     return results;
   } catch (error) {
-    console.error("❌ Erro no query:", error);
-    throw error;
+    console.error("ERRO NA QUERY DO BANCO DE DADOS:", error);
+    if (connection) {
+      await connection.end();
+    }
+    throw new Error('Falha ao comunicar com o banco de dados.');
   }
 }

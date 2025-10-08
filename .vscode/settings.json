@@ -13,6 +13,20 @@
             "name": "DB RAILWAY",
             "database": "railway",
             "username": "root"
+        },
+        {
+            "mysqlOptions": {
+                "authProtocol": "default",
+                "enableSsl": "Disabled"
+            },
+            "ssh": "Disabled",
+            "previewLimit": 50,
+            "server": "shuttle.proxy.rlwy.net",
+            "port": 22818,
+            "driver": "MySQL",
+            "name": "DBRAILWAY",
+            "database": "railway",
+            "username": "root"
         }
     ]
 }
