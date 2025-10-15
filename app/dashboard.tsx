@@ -83,11 +83,17 @@ export default function PollutionDashboard({ onLogout }: { onLogout: () => void 
       setAlerts(currentPayload.alerts);
       setTrendData(trend);
       
-      const aqiHistorical = historical.map((d: any) => ({
-        ...d,
-        aqi: getAqiInfo(d.value).index,
-        time: d.dia_formatado || new Date(d.dia).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })
-      }));
+      const aqiHistorical = historical
+        .filter((d: any) => d && d.dia && !isNaN(new Date(d.dia).getTime()))
+        .map((d: any) => {
+            const date = new Date(d.dia);
+            const time = date.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+            return {
+                ...d,
+                aqi: getAqiInfo(d.value).index,
+                time: time
+            };
+        });
       
       setSensorData(aqiHistorical);
       setSensors(sensorsData);
@@ -286,8 +292,7 @@ export default function PollutionDashboard({ onLogout }: { onLogout: () => void 
           </div>
         </div>
       </header>
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
           <Card className="bg-slate-50/80 dark:bg-slate-800/80 backdrop-blur-sm border-emerald-200 dark:border-emerald-700">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -315,97 +320,70 @@ export default function PollutionDashboard({ onLogout }: { onLogout: () => void 
             </CardContent>
           </Card>
         </div>
-        
-        <Card className="mb-8 border-emerald-200 dark:border-emerald-700 bg-slate-50/80 dark:bg-slate-800/80 backdrop-blur-sm">
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center">
-                <AlertTriangle className="h-5 w-5 text-emerald-600 dark:text-emerald-400 mr-2" />
-                <CardTitle className="text-emerald-600 dark:text-emerald-400">Alertas do Sistema</CardTitle>
-              </div>
-              <Button variant="outline" size="sm" className="border-emerald-300 dark:border-emerald-600 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 bg-transparent">
-                <Filter className="w-4 h-4 mr-2" />
-                Filtrar
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {alerts.length > 0 ? (
-                alerts.map((alert: any) => (
-                  <div key={alert.id} className="flex items-center justify-between p-4 bg-red-50 dark:bg-red-900/30 rounded-lg border border-red-200 dark:border-red-700">
-                    <div>
-                      <p className="font-medium text-slate-900 dark:text-slate-100">{alert.title}</p>
-                      <p className="text-sm text-slate-600 dark:text-slate-300">{alert.message}</p>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Badge variant="destructive">{alert.level}</Badge>
-                      <Button variant="ghost" size="sm" className="text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300">
-                        <Eye className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <div className="flex items-center justify-center p-4 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg border border-emerald-200 dark:border-emerald-700">
-                  <p className="font-medium text-slate-900 dark:text-slate-100">Nenhum alerta crítico no momento.</p>
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
 
-        <PredictionPanel historicalData={predictionData} isRealTimeActive={isRealTimeActive} />
+      <Card className="mb-8 border-emerald-200 dark:border-emerald-700 bg-slate-50/80 dark:bg-slate-800/80 backdrop-blur-sm">
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <AlertTriangle className="h-5 w-5 text-emerald-600 dark:text-emerald-400 mr-2" />
+              <CardTitle className="text-emerald-600 dark:text-emerald-400">Alertas do Sistema</CardTitle>
+            </div>
+            <Button variant="outline" size="sm" className="border-emerald-300 dark:border-emerald-600 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 bg-transparent">
+              <Filter className="w-4 h-4 mr-2" />
+              Filtrar
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-3">
+            {alerts.length > 0 ? (
+              alerts.map((alert: any) => (
+                <div key={alert.id} className="flex items-center justify-between p-4 bg-red-50 dark:bg-red-900/30 rounded-lg border border-red-200 dark:border-red-700">
+                  <div>
+                    <p className="font-medium text-slate-900 dark:text-slate-100">{alert.title}</p>
+                    <p className="text-sm text-slate-600 dark:text-slate-300">{alert.message}</p>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Badge variant="destructive">{alert.level}</Badge>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="flex items-center justify-center p-4 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg border border-emerald-200 dark:border-emerald-700">
+                <p className="font-medium text-slate-900 dark:text-slate-100">Nenhum alerta crítico no momento.</p>
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+      
+      <PredictionPanel historicalData={predictionData} isRealTimeActive={isRealTimeActive} />
         
         <Tabs defaultValue="trends" className="space-y-6">
-          <div className="flex items-center justify-between">
-            <TabsList className="grid w-full max-w-md grid-cols-2 bg-slate-50/80 dark:bg-slate-800/80 backdrop-blur-sm border border-emerald-200 dark:border-emerald-700">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+            <TabsList className="grid w-full max-w-lg grid-cols-2 bg-slate-50/80 dark:bg-slate-800/80 backdrop-blur-sm border border-emerald-200 dark:border-emerald-700">
               <TabsTrigger value="trends" className="data-[state=active]:bg-emerald-600 data-[state=active]:text-white text-emerald-600 dark:text-emerald-400">Tendências</TabsTrigger>
               <TabsTrigger value="sensors" className="data-[state=active]:bg-emerald-600 data-[state=active]:text-white text-emerald-600 dark:text-emerald-400">Sensores</TabsTrigger>
             </TabsList>
-            <div className="flex space-x-2">
+            <div className="flex items-center space-x-2">
               <Button variant="outline" size="sm" className="border-emerald-300 dark:border-emerald-600 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 bg-transparent">
                 <Download className="w-4 h-4 mr-2" />
                 Exportar
               </Button>
             </div>
           </div>
+          
           <TabsContent value="trends" className="space-y-6">
-            <div className="flex items-center space-x-2 mb-4">
-              <span className="text-sm font-medium text-slate-600 dark:text-slate-300">Período:</span>
-              <Button
-                variant={timePeriod === '24h' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => handlePeriodChange('24h')}
-                className="data-[variant=outline]:bg-transparent data-[variant=default]:bg-emerald-600 data-[variant=default]:text-white"
-              >
-                24 Horas
-              </Button>
-              <Button
-                variant={timePeriod === '7d' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => handlePeriodChange('7d')}
-                className="data-[variant=outline]:bg-transparent data-[variant=default]:bg-emerald-600 data-[variant=default]:text-white"
-              >
-                7 Dias
-              </Button>
-              <Button
-                variant={timePeriod === '30d' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => handlePeriodChange('30d')}
-                className="data-[variant=outline]:bg-transparent data-[variant=default]:bg-emerald-600 data-[variant=default]:text-white"
-              >
-                30 Dias
-              </Button>
+            <div className="flex items-center space-x-1 bg-slate-50/80 dark:bg-slate-800/80 p-1 rounded-md border border-emerald-200 dark:border-emerald-700 self-start w-fit">
+                <Button size="sm" variant={timePeriod === '24h' ? 'default' : 'ghost'} onClick={() => handlePeriodChange('24h')} className={timePeriod === '24h' ? 'bg-emerald-600 text-white' : 'text-emerald-600 dark:text-emerald-400'}>24h</Button>
+                <Button size="sm" variant={timePeriod === '7d' ? 'default' : 'ghost'} onClick={() => handlePeriodChange('7d')} className={timePeriod === '7d' ? 'bg-emerald-600 text-white' : 'text-emerald-600 dark:text-emerald-400'}>7d</Button>
+                <Button size="sm" variant={timePeriod === '30d' ? 'default' : 'ghost'} onClick={() => handlePeriodChange('30d')} className={timePeriod === '30d' ? 'bg-emerald-600 text-white' : 'text-emerald-600 dark:text-emerald-400'}>30d</Button>
             </div>
-
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <Card className="bg-slate-50/80 dark:bg-slate-800/80 backdrop-blur-sm border-emerald-200 dark:border-emerald-700">
                 <CardHeader className="flex flex-row items-center justify-between">
                   <div>
-                    <CardTitle className="text-emerald-600 dark:text-emerald-400">Qualidade do Ar - {
-                      { '24h': 'Últimas 24h', '7d': 'Últimos 7 Dias', '30d': 'Últimos 30 Dias' }[timePeriod]
-                    }</CardTitle>
+                    <CardTitle className="text-emerald-600 dark:text-emerald-400">Qualidade do Ar - { { '24h': 'Últimas 24h', '7d': 'Últimos 7 Dias', '30d': 'Últimos 30 Dias' }[timePeriod] }</CardTitle>
                     <CardDescription className="text-slate-600 dark:text-slate-300">Índice de Qualidade do Ar ao longo do tempo</CardDescription>
                   </div>
                   <Button variant="ghost" size="sm" onClick={() => setFullscreenChart("aqi")} className="text-emerald-600 dark:text-emerald-400">
