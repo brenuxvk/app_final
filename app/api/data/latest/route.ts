@@ -1,7 +1,7 @@
 import { query } from '@/lib/db';
 import { NextResponse } from 'next/server';
 
-const CRITICAL_POLLUTION_THRESHOLD = 500; // Defina o limite crítico de poluição
+const CRITICAL_POLLUTION_THRESHOLD = 200; // Defina o limite crítico de poluição
 
 export const dynamic = 'force-dynamic';
 
