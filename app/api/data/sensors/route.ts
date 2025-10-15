@@ -14,7 +14,7 @@ function getMockSensorStatus() {
     id: `S00${index + 1}`,
     location: loc.name,
     position: loc.position, // Coordenadas para o mapa
-    status: Math.random() > 0.1 ? "online" : "offline",
+    status: Math.random() > 0.70 ? "online" : "offline",
     aqi: Math.round(65 + Math.random() * 30),
     co2: Math.round(420 + Math.random() * 50),
     lastUpdate: `${Math.floor(Math.random() * 10) + 1} min`,
