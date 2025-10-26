@@ -11,7 +11,7 @@ O **AntiPollucion** é um sistema completo (ponta a ponta) desenvolvido pela nos
 
 O projeto foi projetado para aplicação em **Ambientes Industriais** (como mineração, siderurgia ou fábricas), onde a conformidade regulatória e a gestão de emissões são críticas. Demonstra uma solução escalável para órgãos como a Secretaria do Meio Ambiente.
 
-## 🛠️ Engenharia de Ponta a Ponta: Contribuições da Equipa
+## 🛠️ Engenharia de Ponta a Ponta: Contribuições da Equipe
 
 Este projeto é um feito de integração que uniu três domínios técnicos:
 
