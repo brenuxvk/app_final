@@ -17,9 +17,9 @@ Este projeto é um feito de integração que uniu três domínios técnicos:
 
 | Área Técnica | Responsáveis | O Que Foi Feito |
 | :--- | :--- | :--- |
-| **Hardware e IoT** | Douglas Alves | Construção do sensor de poluição físico (MQTT/MQ) para a captação de dados no mundo real. |
-| **Infraestrutura e Redes** | Weslley, Gustavo Martins | Arquitetura de rede e topologia Cisco (Packet Tracer) para garantir a transmissão segura dos dados do sensor até a nuvem. |
-| **Software e Cloud** | [Seu Nome], Matheus Palomo | Desenvolvimento da Dashboard interativa (React/Next.js), criação das APIs e integração com o banco de dados MySQL na Railway. |
+| **Hardware e IoT** | Douglas Alves Martins | Construção do sensor de poluição físico (MQTT/MQ) para a captação de dados no mundo real. |
+| **Infraestrutura e Redes** | Weslley Nascimento dos Santos, Gustavo Weiduschardt Martins | Arquitetura de rede e topologia Cisco (Packet Tracer) para garantir a transmissão segura dos dados do sensor até a nuvem. |
+| **Software e Cloud** | Lucas Breno Da Cruz Santos, Matheus Macedo Palomo | Desenvolvimento da Dashboard interativa (React/Next.js), criação das APIs e integração com o banco de dados MySQL na Railway. |
 
 ## ✨ Funcionalidades Principais do Dashboard
 
