@@ -39,4 +39,4 @@ Este projeto é um protótipo educacional e de portefólio. O código-fonte est�
 * **Uso Permitido:** Estudo, demonstração, modificação para fins não comerciais.
 * **Uso Proibido:** É estritamente proibido o uso, distribuição ou integração deste código em produtos comerciais, ou qualquer outra forma de obtenção de lucro.
 
-O Copyright (c) é de **2025** e pertence à Equipa: **[Seu Nome], Matheus Palomo, Douglas Alves, Weslley, e Gustavo Martins.**
+O Copyright (c) é de **2025** e pertence à Equipa: **Lucas Breno Da Cruz Santos, Matheus Macedo Palomo, Douglas Alves Martins, Weslley Nascimento dos Santos e Gustavo Weiduschardt Martins.**
