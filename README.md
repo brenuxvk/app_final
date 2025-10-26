@@ -1,7 +1,7 @@
 # 🛡️ AntiPollucion: Sistema IoT de Monitorização Ambiental
 
-**Link do Projeto (Vercel):** [COLE AQUI O SEU LINK DA VERCEL]
-**Repositório do Código (GitHub):** [COLE AQUI O SEU LINK DO GITHUB]
+**Link do Projeto (Vercel):** https://app-final-kohl.vercel.app
+**Repositório do Código (GitHub):** https://github.com/brenuxvk/app_final
 
 ---
 
