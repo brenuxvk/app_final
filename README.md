@@ -7,7 +7,7 @@
 
 ## 🌎 Aplicação e Foco do Projeto
 
-O **AntiPollucion** é um sistema completo (ponta a ponta) desenvolvido pela nossa equipa para monitorizar a qualidade do ar em tempo real.
+O **AntiPollucion** é um sistema completo (ponta a ponta) desenvolvido pela nossa equipe para monitorizar a qualidade do ar em tempo real.
 
 O projeto foi projetado para aplicação em **Ambientes Industriais** (como mineração, siderurgia ou fábricas), onde a conformidade regulatória e a gestão de emissões são críticas. Demonstra uma solução escalável para órgãos como a Secretaria do Meio Ambiente.
 
@@ -39,4 +39,4 @@ Este projeto é um protótipo educacional e de portefólio. O código-fonte est�
 * **Uso Permitido:** Estudo, demonstração, modificação para fins não comerciais.
 * **Uso Proibido:** É estritamente proibido o uso, distribuição ou integração deste código em produtos comerciais, ou qualquer outra forma de obtenção de lucro.
 
-O Copyright (c) é de **2025** e pertence à Equipa: **Lucas Breno Da Cruz Santos, Matheus Macedo Palomo, Douglas Alves Martins, Weslley Nascimento dos Santos e Gustavo Weiduschardt Martins.**
+O Copyright (c) é de **2025** e pertence à Equipe: **Lucas Breno Da Cruz Santos, Matheus Macedo Palomo, Douglas Alves Martins, Weslley Nascimento dos Santos e Gustavo Weiduschardt Martins.**
