@@ -1,0 +1,18 @@
+🌐 Infraestrutura de Redes e Conectividade
+Responsáveis: Weslley e Gustavo Martins
+
+Esta etapa foi crítica para garantir a transmissão segura, eficiente e ininterrupta dos dados do sensor (IoT) até ao Dashboard na nuvem. A equipa de Redes projetou e simulou uma topologia completa no Cisco Packet Tracer, conectando o ambiente industrial da Fábrica (cliente) à Rede Principal.
+
+Decisões de Engenharia da Topologia Cisco:
+Protocolo de Encaminhamento (OSPF): Utilizámos o OSPF (Open Shortest Path First) para garantir um encaminhamento dinâmico e eficiente. O OSPF permite que a rede encontre automaticamente o caminho mais rápido para a nuvem, garantindo a baixa latência dos dados em tempo real.
+
+Serviços Essenciais de Rede (DHCP): Configurámos o DHCP nos Switches e Roteadores para atribuição automática de endereços IP aos dispositivos IoT e estações de trabalho, simplificando a gestão e evitando conflitos de endereçamento.
+
+Tradução de Endereços (NAT): Implementámos o NAT (Network Address Translation) no(s) Roteador(es) de borda para permitir que o tráfego da rede privada (local) saia para a Internet, garantindo que o sensor MQTT conseguisse comunicar com o Broker na Cloud.
+
+Segurança (ACLs): Para garantir a segurança dos sistemas e restringir o acesso, foram aplicadas ACLs (Access Control Lists). Estas listas de controlo de acesso filtram o tráfego e garantem que apenas a comunicação necessária (MQTT, HTTP) seja permitida, protegendo a rede contra acessos indesejados.
+
+Conexão Cliente-Servidor: Estabelecemos rotas estáticas e dinâmicas para assegurar que a conexão entre a rede interna do cliente e a rede de gestão da empresa fosse sempre estável e redundante.
+
+O Papel do Sensor (IoT)
+O sensor de poluição (construído com o código MQTT) é o ponto de partida do nosso sistema. Ele está ligado à rede, usando o protocolo MQTT para publicar as medições de forma leve e eficiente, através da infraestrutura Cisco, até chegar à API do nosso Dashboard.
